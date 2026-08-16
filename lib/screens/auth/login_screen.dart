@@ -71,15 +71,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    width: 40,
+                    height: 40,
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(
-                      Icons.favorite,
-                      color: AppColors.primary,
-                    ),
+                    child: Image.asset('assets/images/logosole.png'),
                   ),
                   const SizedBox(width: 12),
                   Text(
