@@ -31,7 +31,10 @@ class HomeScreen extends ConsumerWidget {
                 color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Image.asset('assets/images/logosole.png'),
+              child: Image.asset(
+                'assets/images/logosole.png',
+                fit: BoxFit.contain,
+              ),
             ),
             const SizedBox(width: 8),
             const Text('SoleTrade'),

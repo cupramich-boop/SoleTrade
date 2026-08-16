@@ -42,7 +42,10 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Image.asset('assets/images/logosole.png'),
+                  child: Image.asset(
+                    'assets/images/logosole.png',
+                    fit: BoxFit.contain,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 const Text(
