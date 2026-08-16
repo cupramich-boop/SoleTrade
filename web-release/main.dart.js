@@ -33248,7 +33248,7 @@ return""+B.d.aT(a/30)+" miesi\u0105ce"},
 abW(){var s=0,r=A.u(t.H),q,p
 var $async$abW=A.p(function(a,b){if(a===1)return A.q(b,r)
 while(true)switch(s){case 0:s=2
-return A.n($.acm().FD(".env"),$async$abW)
+return A.n($.acm().FD("app.env"),$async$abW)
 case 2:q=$.acm().gNw().h(0,"SUPABASE_URL")
 if(q==null)q=""
 p=$.acm().gNw().h(0,"SUPABASE_ANON_KEY")

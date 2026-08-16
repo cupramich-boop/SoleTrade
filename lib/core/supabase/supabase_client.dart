@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Wywołaj przed runApp() — inicjalizuje połączenie z Supabase.
 Future<void> initSupabase() async {
-  await dotenv.load(fileName: '.env');
+  await dotenv.load(fileName: 'app.env');
 
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '',

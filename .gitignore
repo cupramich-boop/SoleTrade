@@ -46,7 +46,8 @@ app.*.map.json
 /android/.kotlin/
 
 # Environment secrets
-.env
+/.env
+/app.env
 admin/.env.local
 admin/node_modules/
 admin/.next/
