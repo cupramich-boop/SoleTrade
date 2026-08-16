@@ -64,6 +64,21 @@ create policy "Kategorie są publicznie widoczne"
   on public.categories for select
   using (true);
 
+create policy "Moderator zarzadza kategoriami"
+  on public.categories for all
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role in ('moderator', 'admin')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role in ('moderator', 'admin')
+    )
+  );
+
 insert into public.categories (name, icon_url) values
   ('Stopki', null),
   ('Skarpetki', null),

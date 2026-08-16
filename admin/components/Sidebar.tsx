@@ -4,6 +4,7 @@ const links = [
   { href: '/', label: 'Dashboard' },
   { href: '/moderacja', label: 'Moderacja ofert' },
   { href: '/produkty', label: 'Wszystkie produkty' },
+  { href: '/kategorie', label: 'Kategorie' },
   { href: '/uzytkownicy', label: 'Użytkownicy' },
 ];
 
