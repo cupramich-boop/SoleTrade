@@ -249,12 +249,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _startingChat
+                    onPressed:
+                        _startingChat ||
+                            supabase.auth.currentUser?.id == product.sellerId
                         ? null
                         : () => _messageSeller(product),
                     icon: const Icon(Icons.chat_bubble_outline, size: 18),
                     label: Text(
-                      _startingChat ? 'Otwieranie...' : 'Napisz do sprzedającej',
+                      supabase.auth.currentUser?.id == product.sellerId
+                          ? 'To Twoja oferta'
+                          : (_startingChat
+                                ? 'Otwieranie...'
+                                : 'Napisz do sprzedającej'),
                     ),
                   ),
                 ),

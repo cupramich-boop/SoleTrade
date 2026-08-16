@@ -40,6 +40,9 @@ class ChatController {
     if (buyerId == null) {
       throw StateError('Musisz być zalogowana, aby napisać do sprzedającej.');
     }
+    if (buyerId == sellerId) {
+      throw StateError('To Twoja własna oferta.');
+    }
 
     final existing = await supabase
         .from('chats')
