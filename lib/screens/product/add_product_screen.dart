@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
+import '../../core/constants/product_options.dart';
 import '../../core/supabase/supabase_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/categories_provider.dart';
@@ -22,10 +23,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
-  final _sizeCtrl = TextEditingController();
-  final _materialCtrl = TextEditingController();
-  final _conditionCtrl = TextEditingController(text: '1');
 
+  String? _size;
+  String? _material;
+  int _conditionDays = ProductOptions.conditionDaysOptions.first;
   String? _categoryId;
   final List<XFile> _pickedImages = [];
   bool _submitting = false;
@@ -36,9 +37,6 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
-    _sizeCtrl.dispose();
-    _materialCtrl.dispose();
-    _conditionCtrl.dispose();
     super.dispose();
   }
 
@@ -75,8 +73,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   }
 
   Future<void> _submit() async {
-    if (_titleCtrl.text.trim().isEmpty || _priceCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Uzupełnij tytuł i cenę oferty.');
+    if (_titleCtrl.text.trim().isEmpty ||
+        _priceCtrl.text.trim().isEmpty ||
+        _size == null ||
+        _material == null) {
+      setState(() => _error = 'Uzupełnij tytuł, cenę, rozmiar i materiał.');
       return;
     }
 
@@ -93,9 +94,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             title: _titleCtrl.text.trim(),
             description: _descCtrl.text.trim(),
             price: double.tryParse(_priceCtrl.text.replaceAll(',', '.')) ?? 0,
-            conditionDays: int.tryParse(_conditionCtrl.text) ?? 1,
-            size: _sizeCtrl.text.trim(),
-            material: _materialCtrl.text.trim(),
+            conditionDays: _conditionDays,
+            size: _size!,
+            material: _material!,
             categoryId: _categoryId,
             imageUrls: imageUrls,
           );
@@ -106,7 +107,12 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             content: Text('Oferta wysłana do moderacji.'),
           ),
         );
-        context.pop();
+        ref.invalidate(myProductsProvider);
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/');
+        }
       }
     } catch (e) {
       setState(() => _error = 'Nie udało się dodać oferty. $e');
@@ -204,12 +210,25 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
-                    controller: _conditionCtrl,
-                    keyboardType: TextInputType.number,
+                  child: DropdownButtonFormField<int>(
+                    initialValue: _conditionDays,
+                    isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Używane (dni)',
                     ),
+                    items: ProductOptions.conditionDaysOptions
+                        .map(
+                          (d) => DropdownMenuItem(
+                            value: d,
+                            child: Text(
+                              ProductOptions.conditionDaysLabel(d),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _conditionDays = v ?? _conditionDays),
                   ),
                 ),
               ],
@@ -218,16 +237,36 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _sizeCtrl,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _size,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Rozmiar'),
+                    items: ProductOptions.sizes
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _size = v),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
-                    controller: _materialCtrl,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _material,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Materiał'),
+                    items: ProductOptions.materials
+                        .map(
+                          (m) => DropdownMenuItem(
+                            value: m,
+                            child: Text(m, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _material = v),
                   ),
                 ),
               ],
@@ -236,11 +275,14 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             categories.when(
               data: (list) => DropdownButtonFormField<String>(
                 initialValue: _categoryId,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Kategoria'),
                 items: list
                     .map(
-                      (c) =>
-                          DropdownMenuItem(value: c.id, child: Text(c.name)),
+                      (c) => DropdownMenuItem(
+                        value: c.id,
+                        child: Text(c.name, overflow: TextOverflow.ellipsis),
+                      ),
                     )
                     .toList(),
                 onChanged: (v) => setState(() => _categoryId = v),

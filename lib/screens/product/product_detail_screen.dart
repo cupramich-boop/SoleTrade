@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/supabase/supabase_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/profile.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/follow_provider.dart';
 import '../../providers/products_provider.dart';
 import '../../widgets/info_tag.dart';
 
@@ -42,6 +44,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     }
   }
 
+  void _openFullscreenGallery(BuildContext context, List<ProductImage> images) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            _FullscreenGallery(images: images, initialIndex: _imageIndex),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final productAsync = ref.watch(productDetailProvider(widget.productId));
@@ -70,15 +83,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     AspectRatio(
                       aspectRatio: 1,
                       child: images.isNotEmpty
-                          ? PageView.builder(
-                              itemCount: images.length,
-                              onPageChanged: (i) =>
-                                  setState(() => _imageIndex = i),
-                              itemBuilder: (context, i) => CachedNetworkImage(
-                                imageUrl: images[i].imageUrl,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) =>
-                                    Container(color: AppColors.primaryLight),
+                          ? GestureDetector(
+                              onTap: () => _openFullscreenGallery(context, images),
+                              child: PageView.builder(
+                                itemCount: images.length,
+                                onPageChanged: (i) =>
+                                    setState(() => _imageIndex = i),
+                                itemBuilder: (context, i) => CachedNetworkImage(
+                                  imageUrl: images[i].imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) =>
+                                      Container(color: AppColors.primaryLight),
+                                ),
                               ),
                             )
                           : Container(color: AppColors.primaryLight),
@@ -250,6 +266,81 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 }
 
+class _FullscreenGallery extends StatefulWidget {
+  const _FullscreenGallery({required this.images, required this.initialIndex});
+
+  final List<ProductImage> images;
+  final int initialIndex;
+
+  @override
+  State<_FullscreenGallery> createState() => _FullscreenGalleryState();
+}
+
+class _FullscreenGalleryState extends State<_FullscreenGallery> {
+  late final PageController _controller = PageController(
+    initialPage: widget.initialIndex,
+  );
+  late int _index = widget.initialIndex;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            PageView.builder(
+              controller: _controller,
+              itemCount: widget.images.length,
+              onPageChanged: (i) => setState(() => _index = i),
+              itemBuilder: (context, i) => InteractiveViewer(
+                minScale: 1,
+                maxScale: 4,
+                child: Center(
+                  child: CachedNetworkImage(
+                    imageUrl: widget.images[i].imageUrl,
+                    fit: BoxFit.contain,
+                    errorWidget: (_, __, ___) => const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.white54,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: _CircleButton(
+                icon: Icons.close,
+                onTap: () => Navigator.of(context).pop(),
+              ),
+            ),
+            if (widget.images.length > 1)
+              Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Text(
+                  '${_index + 1} / ${widget.images.length}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CircleButton extends StatelessWidget {
   const _CircleButton({required this.icon, required this.onTap});
 
@@ -272,17 +363,47 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
-class _SellerRow extends ConsumerWidget {
+class _SellerRow extends ConsumerStatefulWidget {
   const _SellerRow({required this.sellerId});
 
   final String sellerId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sellerAsync = ref.watch(sellerProfileProvider(sellerId));
+  ConsumerState<_SellerRow> createState() => _SellerRowState();
+}
+
+class _SellerRowState extends ConsumerState<_SellerRow> {
+  bool _updating = false;
+
+  Future<void> _toggleFollow(bool currentlyFollowing) async {
+    setState(() => _updating = true);
+    try {
+      final controller = ref.read(followControllerProvider);
+      if (currentlyFollowing) {
+        await controller.unfollow(widget.sellerId);
+      } else {
+        await controller.follow(widget.sellerId);
+      }
+      ref.invalidate(followingIdsProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
+      }
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sellerAsync = ref.watch(sellerProfileProvider(widget.sellerId));
+    final followingAsync = ref.watch(followingIdsProvider);
+    final isOwnProfile = supabase.auth.currentUser?.id == widget.sellerId;
 
     return sellerAsync.when(
-      data: (seller) => _content(seller),
+      data: (seller) => _content(seller, isOwnProfile, followingAsync),
       loading: () => const SizedBox(
         height: 48,
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -291,11 +412,18 @@ class _SellerRow extends ConsumerWidget {
     );
   }
 
-  Widget _content(Profile seller) {
+  Widget _content(
+    Profile seller,
+    bool isOwnProfile,
+    AsyncValue<Set<String>> followingAsync,
+  ) {
+    final isFollowing = followingAsync.value?.contains(widget.sellerId) ?? false;
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         CircleAvatar(
-          radius: 24,
+          radius: 22,
           backgroundColor: AppColors.primaryLight,
           backgroundImage: seller.avatarUrl != null
               ? CachedNetworkImageProvider(seller.avatarUrl!)
@@ -304,57 +432,80 @@ class _SellerRow extends ConsumerWidget {
               ? const Icon(Icons.person, color: AppColors.primary)
               : null,
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
-                  Text(
-                    seller.username,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  Flexible(
+                    child: Text(
+                      seller.username,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(
-                    Icons.verified,
-                    size: 16,
-                    color: AppColors.primary,
-                  ),
+                  const Icon(Icons.verified, size: 15, color: AppColors.primary),
                 ],
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               Row(
                 children: [
-                  const Icon(Icons.star, size: 14, color: AppColors.star),
+                  const Icon(Icons.star, size: 12, color: AppColors.star),
                   const SizedBox(width: 2),
                   Text(
                     '${seller.ratingScore.toStringAsFixed(1)} (${seller.totalSold})',
                     style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '${seller.totalSold}+ sprzedanych',
-                    style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               ),
+              Text(
+                '${seller.totalSold}+ sprzedanych',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
             ],
           ),
         ),
-        OutlinedButton(
-          onPressed: () {},
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        if (!isOwnProfile) ...[
+          const SizedBox(width: 8),
+          SizedBox(
+            height: 34,
+            child: ElevatedButton(
+              onPressed: _updating ? null : () => _toggleFollow(isFollowing),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isFollowing
+                    ? AppColors.primaryLight
+                    : AppColors.primary,
+                foregroundColor: isFollowing
+                    ? AppColors.primary
+                    : Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                minimumSize: Size.zero,
+                shape: const StadiumBorder(),
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              child: _updating
+                  ? const SizedBox(
+                      height: 14,
+                      width: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(isFollowing ? 'Obserwujesz' : 'Obserwuj'),
+            ),
           ),
-          child: const Text('Obserwuj'),
-        ),
+        ],
       ],
     );
   }

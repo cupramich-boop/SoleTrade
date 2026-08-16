@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../models/product.dart';
 import '../../providers/categories_provider.dart';
 import '../../providers/products_provider.dart';
 import '../../widgets/category_chip.dart';
-import '../../widgets/product_card.dart';
+import '../../widgets/product_carousel.dart';
+import '../../widgets/snap_scroll_physics.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -14,7 +16,8 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categories = ref.watch(categoriesProvider);
-    final products = ref.watch(featuredProductsProvider);
+    final featured = ref.watch(featuredProductsProvider);
+    final newest = ref.watch(newestProductsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -47,6 +50,7 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(categoriesProvider);
           ref.invalidate(featuredProductsProvider);
+          ref.invalidate(newestProductsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -72,6 +76,7 @@ class HomeScreen extends ConsumerWidget {
               child: categories.when(
                 data: (list) => ListView.separated(
                   scrollDirection: Axis.horizontal,
+                  physics: const SnapScrollPhysics(itemExtent: 64 + 16),
                   itemCount: list.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 16),
                   itemBuilder: (context, i) =>
@@ -83,54 +88,120 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 28),
-            const Text(
-              'Polecane',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-            ),
-            const SizedBox(height: 12),
-            products.when(
-              data: (list) {
-                if (list.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Text(
-                      'Brak ofert do wyświetlenia.',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  );
-                }
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: list.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    childAspectRatio: 0.68,
-                  ),
-                  itemBuilder: (context, i) => ProductCard(
-                    product: list[i],
-                    onTap: () => context.push('/product/${list[i].id}'),
-                  ),
-                );
-              },
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, st) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Text(
-                  'Nie udało się wczytać ofert.\n$e',
-                  style: const TextStyle(color: AppColors.textSecondary),
-                ),
-              ),
-            ),
+            _ProductSection(title: 'Polecane', productsAsync: featured),
+            const SizedBox(height: 24),
+            _SellBanner(onTap: () => context.push('/add-product')),
+            const SizedBox(height: 24),
+            _ProductSection(title: 'Najnowsze', productsAsync: newest),
             const SizedBox(height: 24),
             const _PrivacyBanner(),
             const SizedBox(height: 24),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductSection extends StatelessWidget {
+  const _ProductSection({required this.title, required this.productsAsync});
+
+  final String title;
+  final AsyncValue<List<Product>> productsAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
+        const SizedBox(height: 12),
+        productsAsync.when(
+          data: (list) {
+            if (list.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  'Brak ofert do wyświetlenia.',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              );
+            }
+            return ProductCarousel(
+              products: list,
+              onTap: (product) => context.push('/product/${product.id}'),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, st) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text(
+              'Nie udało się wczytać ofert.\n$e',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SellBanner extends StatelessWidget {
+  const _SellBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Material(
+        color: AppColors.primary,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.sell_outlined, color: Colors.white),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Masz coś do sprzedania?',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Wystaw ofertę w kilka minut.',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+              ],
+            ),
+          ),
         ),
       ),
     );

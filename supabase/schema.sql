@@ -108,6 +108,24 @@ create policy "Sprzedawca usuwa tylko swoje oferty"
   on public.products for delete
   using (seller_id = auth.uid());
 
+create policy "Moderator widzi wszystkie oferty"
+  on public.products for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role in ('moderator', 'admin')
+    )
+  );
+
+create policy "Moderator aktualizuje status dowolnej oferty"
+  on public.products for update
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role in ('moderator', 'admin')
+    )
+  );
+
 -- =========================================================
 -- PRODUCT IMAGES
 -- =========================================================
@@ -246,6 +264,31 @@ create policy "Użytkownik zarządza tylko swoimi urządzeniami"
   on public.user_devices for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- =========================================================
+-- FOLLOWS — obserwowani sprzedający
+-- =========================================================
+create table if not exists public.follows (
+  follower_id uuid not null references public.profiles (id) on delete cascade,
+  followed_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, followed_id),
+  check (follower_id <> followed_id)
+);
+
+alter table public.follows enable row level security;
+
+create policy "Użytkownik widzi kogo obserwuje i kto go obserwuje"
+  on public.follows for select
+  using (auth.uid() = follower_id or auth.uid() = followed_id);
+
+create policy "Użytkownik zaczyna obserwować"
+  on public.follows for insert
+  with check (auth.uid() = follower_id);
+
+create policy "Użytkownik przestaje obserwować"
+  on public.follows for delete
+  using (auth.uid() = follower_id);
 
 -- =========================================================
 -- STORAGE — bucket na zdjęcia produktów i avatary

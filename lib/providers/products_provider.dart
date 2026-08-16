@@ -19,6 +19,19 @@ final featuredProductsProvider = FutureProvider<List<Product>>((ref) async {
       .toList();
 });
 
+/// Najnowsze aktywne oferty (osobna karuzela na stronie głównej).
+final newestProductsProvider = FutureProvider<List<Product>>((ref) async {
+  final data = await supabase
+      .from('products')
+      .select(_productSelect)
+      .eq('status', 'active')
+      .order('created_at', ascending: false)
+      .limit(12);
+  return (data as List)
+      .map((e) => Product.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+
 final productDetailProvider = FutureProvider.family<Product, String>((
   ref,
   productId,

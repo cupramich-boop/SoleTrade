@@ -50,3 +50,6 @@ admin/.env.local
 admin/node_modules/
 admin/.next/
 admin/tsconfig.tsbuildinfo
+
+# Local Claude Code dev-server launch config (machine-specific)
+.claude/
