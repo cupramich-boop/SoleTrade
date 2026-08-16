@@ -229,27 +229,27 @@ class _HeroBanner extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(
-              right: -16,
+              right: 0,
               bottom: 0,
               top: 0,
+              width: 190,
               child: Image.asset(
                 'assets/images/baner.png',
-                width: 170,
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomRight,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
               ),
             ),
             Padding(
               padding: const EdgeInsets.all(24),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 210),
+                constraints: const BoxConstraints(maxWidth: 170),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Kupuj i sprzedawaj\nużywane skarpetki',
+                      'Kupuj i sprzedawaj używane skarpetki',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 19,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                         height: 1.25,
@@ -257,8 +257,9 @@ class _HeroBanner extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Dyskretna. Bezpieczna.\nStworzona dla Ciebie.',
+                      'Dyskretna. Bezpieczna. Stworzona dla Ciebie.',
                       style: TextStyle(
+                        fontSize: 13,
                         color: AppColors.textSecondary,
                         height: 1.4,
                       ),
