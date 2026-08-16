@@ -188,6 +188,20 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           ),
                         ],
                       ),
+                      if (supabase.auth.currentUser?.id == product.sellerId) ...[
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => context.push(
+                              '/product/${product.id}/edit',
+                              extra: product,
+                            ),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Edytuj ofertę'),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       const Text(
                         'Opis',

@@ -10,6 +10,7 @@ const EDITABLE_FIELDS = [
   'material',
   'category_id',
   'status',
+  'is_featured',
 ] as const;
 
 export async function PATCH(

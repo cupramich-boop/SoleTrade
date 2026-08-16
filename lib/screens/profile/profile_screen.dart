@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/supabase/supabase_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../models/product.dart';
 import '../../models/profile.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/follow_provider.dart';
@@ -133,7 +134,7 @@ class _ProfileHeader extends StatelessWidget {
 class _MyProductsTab extends StatelessWidget {
   const _MyProductsTab({required this.myProducts});
 
-  final AsyncValue<List<dynamic>> myProducts;
+  final AsyncValue<List<Product>> myProducts;
 
   @override
   Widget build(BuildContext context) {
@@ -154,11 +155,27 @@ class _MyProductsTab extends StatelessWidget {
             final p = list[i];
             return Card(
               child: ListTile(
-                title: Text(p.title as String),
-                subtitle: Text(
-                  '${(p.price as double).toStringAsFixed(0)} zł · ${p.status.name}',
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: p.mainImageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: p.mainImageUrl,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) =>
+                                Container(color: AppColors.primaryLight),
+                          )
+                        : Container(color: AppColors.primaryLight),
+                  ),
                 ),
-                onTap: () => context.push('/product/${p.id}'),
+                title: Text(p.title),
+                subtitle: Text(
+                  '${p.price.toStringAsFixed(0)} zł · ${p.status.name}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/product/${p.id}', extra: p),
               ),
             );
           },

@@ -20,6 +20,7 @@ type Product = {
   material: string;
   category_id: string | null;
   status: string;
+  is_featured: boolean;
 };
 
 type ProductImage = {
@@ -50,6 +51,7 @@ export function ProductEditForm({
     material: product.material,
     category_id: product.category_id ?? '',
     status: product.status,
+    is_featured: product.is_featured,
   });
   const [imageList, setImageList] = useState(
     [...images].sort((a, b) => a.position - b.position),
@@ -307,6 +309,17 @@ export function ProductEditForm({
                 </option>
               ))}
             </select>
+          </label>
+          <label className="col-span-2 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={form.is_featured}
+              onChange={(e) => setForm({ ...form, is_featured: e.target.checked })}
+              className="h-4 w-4 rounded border-primary-light text-primary"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Polecane (widoczne w karuzeli &quot;Polecane&quot; na stronie głównej)
+            </span>
           </label>
         </div>
         <button

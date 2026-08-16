@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,26 +10,37 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../../core/constants/product_options.dart';
 import '../../core/supabase/supabase_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../models/product.dart';
 import '../../providers/categories_provider.dart';
 import '../../providers/products_provider.dart';
 
-class AddProductScreen extends ConsumerStatefulWidget {
-  const AddProductScreen({super.key});
+class EditProductScreen extends ConsumerStatefulWidget {
+  const EditProductScreen({super.key, required this.product});
+
+  final Product product;
 
   @override
-  ConsumerState<AddProductScreen> createState() => _AddProductScreenState();
+  ConsumerState<EditProductScreen> createState() => _EditProductScreenState();
 }
 
-class _AddProductScreenState extends ConsumerState<AddProductScreen> {
-  final _titleCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  final _priceCtrl = TextEditingController();
+class _EditProductScreenState extends ConsumerState<EditProductScreen> {
+  late final _titleCtrl = TextEditingController(text: widget.product.title);
+  late final _descCtrl = TextEditingController(
+    text: widget.product.description,
+  );
+  late final _priceCtrl = TextEditingController(
+    text: widget.product.price.toStringAsFixed(0),
+  );
 
-  String? _size;
-  String? _material;
-  int _conditionDays = ProductOptions.conditionDaysOptions.first;
-  String? _categoryId;
-  final List<XFile> _pickedImages = [];
+  late String? _size = widget.product.size.isEmpty ? null : widget.product.size;
+  late String? _material =
+      widget.product.material.isEmpty ? null : widget.product.material;
+  late int _conditionDays = widget.product.conditionDays;
+  late String? _categoryId = widget.product.categoryId;
+  late final List<ProductImage> _existingImages = List.of(
+    widget.product.images,
+  );
+  final List<XFile> _newImages = [];
   bool _submitting = false;
   String? _error;
 
@@ -40,7 +52,14 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     super.dispose();
   }
 
-  static const _allowedExtensions = {'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'};
+  static const _allowedExtensions = {
+    'jpg',
+    'jpeg',
+    'png',
+    'webp',
+    'heic',
+    'heif',
+  };
   static const _contentTypes = {
     'jpg': 'image/jpeg',
     'jpeg': 'image/jpeg',
@@ -79,19 +98,44 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     }
 
     if (valid.isNotEmpty) {
-      setState(() => _pickedImages.addAll(valid));
+      setState(() => _newImages.addAll(valid));
     }
   }
 
-  Future<List<String>> _uploadImages() async {
-    final userId = supabase.auth.currentUser!.id;
-    final urls = <String>[];
+  Future<void> _removeExistingImage(ProductImage image) async {
+    setState(() => _existingImages.remove(image));
+    await ref.read(productsControllerProvider).deleteImage(image.id);
+  }
 
-    for (final image in _pickedImages) {
+  Future<void> _setCover(ProductImage image) async {
+    setState(() {
+      _existingImages
+        ..clear()
+        ..addAll(
+          _existingImages.map(
+            (i) => ProductImage(
+              id: i.id,
+              productId: i.productId,
+              imageUrl: i.imageUrl,
+              isMain: i.id == image.id,
+            ),
+          ),
+        );
+    });
+    await ref
+        .read(productsControllerProvider)
+        .setMainImage(productId: widget.product.id, imageId: image.id);
+  }
+
+  Future<void> _uploadNewImages() async {
+    final userId = supabase.auth.currentUser!.id;
+    final hasCover = _existingImages.any((i) => i.isMain);
+
+    for (var i = 0; i < _newImages.length; i++) {
+      final image = _newImages[i];
       final bytes = await image.readAsBytes();
       final ext = image.name.split('.').last.toLowerCase();
-      final path =
-          '$userId/${DateTime.now().microsecondsSinceEpoch}.$ext';
+      final path = '$userId/${DateTime.now().microsecondsSinceEpoch}.$ext';
 
       await supabase.storage
           .from('product-images')
@@ -104,10 +148,15 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             ),
           );
 
-      urls.add(supabase.storage.from('product-images').getPublicUrl(path));
+      final url = supabase.storage.from('product-images').getPublicUrl(path);
+      await ref
+          .read(productsControllerProvider)
+          .addImage(
+            productId: widget.product.id,
+            imageUrl: url,
+            isMain: !hasCover && i == 0,
+          );
     }
-
-    return urls;
   }
 
   Future<void> _submit() async {
@@ -125,10 +174,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     });
 
     try {
-      final imageUrls = await _uploadImages();
+      await _uploadNewImages();
       await ref
           .read(productsControllerProvider)
-          .createProduct(
+          .updateProduct(
+            productId: widget.product.id,
             title: _titleCtrl.text.trim(),
             description: _descCtrl.text.trim(),
             price: double.tryParse(_priceCtrl.text.replaceAll(',', '.')) ?? 0,
@@ -136,26 +186,16 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             size: _size!,
             material: _material!,
             categoryId: _categoryId,
-            imageUrls: imageUrls,
           );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Oferta wysłana do moderacji.'),
+            content: Text('Zapisano zmiany. Oferta wraca do moderacji.'),
           ),
         );
         ref.invalidate(myProductsProvider);
-        setState(() {
-          _titleCtrl.clear();
-          _descCtrl.clear();
-          _priceCtrl.clear();
-          _size = null;
-          _material = null;
-          _conditionDays = ProductOptions.conditionDaysOptions.first;
-          _categoryId = null;
-          _pickedImages.clear();
-        });
+        ref.invalidate(productDetailProvider(widget.product.id));
         if (context.canPop()) {
           context.pop();
         } else {
@@ -163,7 +203,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         }
       }
     } catch (e) {
-      setState(() => _error = 'Nie udało się dodać oferty. $e');
+      setState(() => _error = 'Nie udało się zapisać zmian. $e');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -174,23 +214,109 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     final categories = ref.watch(categoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dodaj ofertę')),
+      appBar: AppBar(title: const Text('Edytuj ofertę')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Zdjęcia',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
+            const Text('Zdjęcia', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             SizedBox(
               height: 96,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  ..._pickedImages.map(
+                  ..._existingImages.map(
+                    (img) => Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: SizedBox(
+                              width: 96,
+                              height: 96,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  CachedNetworkImage(
+                                    imageUrl: img.imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorWidget: (_, __, ___) =>
+                                        Container(color: AppColors.primaryLight),
+                                  ),
+                                  if (img.isMain)
+                                    Positioned(
+                                      left: 4,
+                                      top: 4,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Text(
+                                          'Okładka',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 2,
+                            top: 2,
+                            child: GestureDetector(
+                              onTap: () => _removeExistingImage(img),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (!img.isMain)
+                            Positioned(
+                              left: 2,
+                              bottom: 2,
+                              child: GestureDetector(
+                                onTap: () => _setCover(img),
+                                child: Container(
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.star_outline,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  ..._newImages.map(
                     (img) => Padding(
                       padding: const EdgeInsets.only(right: 10),
                       child: ClipRRect(
@@ -354,7 +480,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Wystaw ofertę'),
+                  : const Text('Zapisz zmiany'),
             ),
           ],
         ),

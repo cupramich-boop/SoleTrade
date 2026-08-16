@@ -5,6 +5,7 @@ type Product = {
   title: string;
   price: number;
   status: string;
+  is_featured: boolean;
   created_at: string;
   profiles: { username: string } | { username: string }[] | null;
   product_images: { image_url: string; is_main: boolean }[];
@@ -82,6 +83,11 @@ export function ProductsTable({ products }: { products: Product[] }) {
                   >
                     {STATUS_LABELS[product.status] ?? product.status}
                   </span>
+                  {product.is_featured && (
+                    <span className="ml-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                      Polecane
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <Link

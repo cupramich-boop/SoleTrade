@@ -62,7 +62,11 @@ class _ChatTile extends ConsumerWidget {
         loading: () => const Text('...'),
         error: (e, st) => const Text('Użytkownik'),
       ),
-      subtitle: const Text('Otwórz, aby zobaczyć wiadomości'),
+      subtitle: Text(
+        chat.productTitle ?? 'Otwórz, aby zobaczyć wiadomości',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       onTap: () => context.push('/chat/${chat.id}'),
     );
   }

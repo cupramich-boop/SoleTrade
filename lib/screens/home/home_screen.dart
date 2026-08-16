@@ -77,11 +77,11 @@ class HomeScreen extends ConsumerWidget {
                   physics: const SnapScrollPhysics(itemExtent: 64 + 16),
                   itemCount: list.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, i) =>
-                      CategoryChip(
-                        label: list[i].name,
-                        iconUrl: list[i].iconUrl,
-                      ),
+                  itemBuilder: (context, i) => CategoryChip(
+                    label: list[i].name,
+                    iconUrl: list[i].iconUrl,
+                    onTap: () => context.push('/category', extra: list[i]),
+                  ),
                 ),
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),

@@ -2,14 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/supabase/supabase_client.dart';
 import '../models/chat.dart';
+import 'auth_provider.dart';
 
 /// Lista czatów zalogowanego użytkownika (jako kupujący lub sprzedający).
 final myChatsProvider = FutureProvider<List<SoleChat>>((ref) async {
-  final userId = supabase.auth.currentUser?.id;
+  final userId = ref.watch(currentUserProvider)?.id;
   if (userId == null) return [];
   final data = await supabase
       .from('chats')
-      .select()
+      .select('*, products(title)')
       .or('buyer_id.eq.$userId,seller_id.eq.$userId')
       .order('created_at', ascending: false);
   return (data as List)

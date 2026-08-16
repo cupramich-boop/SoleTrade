@@ -102,6 +102,7 @@ create table if not exists public.products (
   material text not null default '',
   status text not null default 'pending'
     check (status in ('pending', 'active', 'sold', 'rejected')),
+  is_featured boolean not null default false,
   created_at timestamptz not null default now()
 );
 

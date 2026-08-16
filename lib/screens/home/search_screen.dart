@@ -164,7 +164,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(featuredProductsProvider);
+    final productsAsync = ref.watch(activeProductsProvider);
 
     return Scaffold(
       appBar: AppBar(

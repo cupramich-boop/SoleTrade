@@ -31,12 +31,25 @@ class SoleChat {
   final String id;
   final String buyerId;
   final String sellerId;
+  final String? productId;
+  final String? productTitle;
 
-  SoleChat({required this.id, required this.buyerId, required this.sellerId});
+  SoleChat({
+    required this.id,
+    required this.buyerId,
+    required this.sellerId,
+    this.productId,
+    this.productTitle,
+  });
 
-  factory SoleChat.fromJson(Map<String, dynamic> json) => SoleChat(
-    id: json['id'] as String,
-    buyerId: json['buyer_id'] as String,
-    sellerId: json['seller_id'] as String,
-  );
+  factory SoleChat.fromJson(Map<String, dynamic> json) {
+    final product = json['products'] as Map<String, dynamic>?;
+    return SoleChat(
+      id: json['id'] as String,
+      buyerId: json['buyer_id'] as String,
+      sellerId: json['seller_id'] as String,
+      productId: json['product_id'] as String?,
+      productTitle: product?['title'] as String?,
+    );
+  }
 }
