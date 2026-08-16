@@ -24,16 +24,14 @@ class HomeScreen extends ConsumerWidget {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              width: 32,
+              height: 32,
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.favorite,
-                color: AppColors.primary,
-                size: 18,
-              ),
+              child: Image.asset('assets/images/logosole.png'),
             ),
             const SizedBox(width: 8),
             const Text('SoleTrade'),
@@ -221,7 +219,6 @@ class _HeroBanner extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [AppColors.primaryLight, AppColors.primaryLight.withValues(alpha: 0.4)],
@@ -229,27 +226,51 @@ class _HeroBanner extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            const Text(
-              'Kupuj i sprzedawaj\nużywane skarpetki',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-                height: 1.25,
+            Positioned(
+              right: -16,
+              bottom: 0,
+              top: 0,
+              child: Image.asset(
+                'assets/images/baner.png',
+                width: 170,
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomRight,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Dyskretna. Bezpieczna.\nStworzona dla Ciebie.',
-              style: TextStyle(color: AppColors.textSecondary, height: 1.4),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: onBrowse,
-              child: const Text('Przeglądaj oferty'),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 210),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Kupuj i sprzedawaj\nużywane skarpetki',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Dyskretna. Bezpieczna.\nStworzona dla Ciebie.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: onBrowse,
+                      child: const Text('Przeglądaj oferty'),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
