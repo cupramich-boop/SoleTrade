@@ -104,7 +104,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       left: 16,
                       child: _CircleButton(
                         icon: Icons.arrow_back,
-                        onTap: () => context.pop(),
+                        onTap: () =>
+                            context.canPop() ? context.pop() : context.go('/'),
                       ),
                     ),
                     Positioned(
@@ -170,8 +171,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                       Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           InfoTag(
                             icon: Icons.calendar_today_outlined,

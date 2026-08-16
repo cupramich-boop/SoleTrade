@@ -126,6 +126,15 @@ create policy "Moderator aktualizuje status dowolnej oferty"
     )
   );
 
+create policy "Moderator usuwa dowolna oferte"
+  on public.products for delete
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role in ('moderator', 'admin')
+    )
+  );
+
 -- =========================================================
 -- PRODUCT IMAGES
 -- =========================================================
@@ -133,7 +142,8 @@ create table if not exists public.product_images (
   id uuid primary key default uuid_generate_v4(),
   product_id uuid not null references public.products (id) on delete cascade,
   image_url text not null,
-  is_main boolean not null default false
+  is_main boolean not null default false,
+  position integer not null default 0
 );
 
 alter table public.product_images enable row level security;
@@ -154,6 +164,21 @@ create policy "Sprzedawca zarządza zdjęciami swoich ofert"
   )
   with check (
     exists (select 1 from public.products p where p.id = product_id and p.seller_id = auth.uid())
+  );
+
+create policy "Moderator zarządza zdjęciami dowolnej oferty"
+  on public.product_images for all
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role in ('moderator', 'admin')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role in ('moderator', 'admin')
+    )
   );
 
 -- =========================================================
