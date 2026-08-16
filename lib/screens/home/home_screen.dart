@@ -80,7 +80,10 @@ class HomeScreen extends ConsumerWidget {
                   itemCount: list.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 16),
                   itemBuilder: (context, i) =>
-                      CategoryChip(label: list[i].name),
+                      CategoryChip(
+                        label: list[i].name,
+                        iconUrl: list[i].iconUrl,
+                      ),
                 ),
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),
