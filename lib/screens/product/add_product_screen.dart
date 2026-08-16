@@ -40,11 +40,46 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     super.dispose();
   }
 
+  static const _allowedExtensions = {'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'};
+  static const _contentTypes = {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'webp': 'image/webp',
+    'heic': 'image/heic',
+    'heif': 'image/heif',
+  };
+
   Future<void> _pickImages() async {
     final picker = ImagePicker();
     final images = await picker.pickMultiImage(imageQuality: 75);
-    if (images.isNotEmpty) {
-      setState(() => _pickedImages.addAll(images));
+    if (images.isEmpty) return;
+
+    final valid = <XFile>[];
+    var rejected = 0;
+    for (final image in images) {
+      final ext = image.name.split('.').last.toLowerCase();
+      if (_allowedExtensions.contains(ext)) {
+        valid.add(image);
+      } else {
+        rejected++;
+      }
+    }
+
+    if (rejected > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            rejected == 1
+                ? 'Pominięto 1 plik — obsługiwane są tylko zdjęcia JPG, PNG i WEBP.'
+                : 'Pominięto $rejected plików — obsługiwane są tylko zdjęcia JPG, PNG i WEBP.',
+          ),
+        ),
+      );
+    }
+
+    if (valid.isNotEmpty) {
+      setState(() => _pickedImages.addAll(valid));
     }
   }
 
@@ -54,7 +89,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 
     for (final image in _pickedImages) {
       final bytes = await image.readAsBytes();
-      final ext = image.name.split('.').last;
+      final ext = image.name.split('.').last.toLowerCase();
       final path =
           '$userId/${DateTime.now().microsecondsSinceEpoch}.$ext';
 
@@ -63,7 +98,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           .uploadBinary(
             path,
             Uint8List.fromList(bytes),
-            fileOptions: const FileOptions(upsert: true),
+            fileOptions: FileOptions(
+              upsert: true,
+              contentType: _contentTypes[ext],
+            ),
           );
 
       urls.add(supabase.storage.from('product-images').getPublicUrl(path));
