@@ -26,7 +26,7 @@ final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>((
       .from('messages')
       .stream(primaryKey: ['id'])
       .eq('chat_id', chatId)
-      .order('created_at')
+      .order('created_at', ascending: true)
       .map((rows) => rows.map(ChatMessage.fromJson).toList());
 });
 

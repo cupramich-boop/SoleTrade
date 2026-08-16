@@ -53,35 +53,58 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   itemBuilder: (context, i) {
                     final msg = messages[messages.length - 1 - i];
                     final isMine = msg.senderId == myId;
-                    return Align(
-                      alignment: isMine
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.72,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isMine
-                              ? AppColors.primary
-                              : AppColors.surface,
-                          border: isMine
-                              ? null
-                              : Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          msg.text,
-                          style: TextStyle(
-                            color: isMine ? Colors.white : AppColors.textPrimary,
+                    final local = msg.createdAt.toLocal();
+                    final time =
+                        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+                    return Column(
+                      crossAxisAlignment: isMine
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        Align(
+                          alignment: isMine
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.72,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isMine
+                                  ? AppColors.primary
+                                  : AppColors.surface,
+                              border: isMine
+                                  ? null
+                                  : Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              msg.text,
+                              style: TextStyle(
+                                color: isMine
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2, bottom: 2),
+                          child: Text(
+                            time,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     );
                   },
                 );
